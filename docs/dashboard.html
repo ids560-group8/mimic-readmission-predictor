@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>30 Days Hospital Readmission Predictions</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1EE; color: #1a1a1a; display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar { width: 230px; background: #fff; border-right: 0.5px solid #d0d0d0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 10; }
+.sidebar-logo { padding: 24px 20px 16px; display: flex; align-items: center; gap: 12px; }
+.sidebar-logo img { width: 40px; height: 40px; border-radius: 50%; }
+.sidebar-logo span { font-size: 13px; font-weight: 600; color: #001E61; letter-spacing: 0.03em; line-height: 1.3; }
+.sidebar-nav { padding: 8px 0; flex: 1; }
+.sidebar-nav a { display: block; padding: 11px 24px; font-size: 13px; font-weight: 500; color: #555; text-decoration: none; letter-spacing: 0.04em; text-transform: uppercase; border-left: 3px solid transparent; }
+.sidebar-nav a:hover { color: #001E61; background: #f7f7f5; }
+.sidebar-nav a.active { color: #001E61; border-left-color: #001E61; background: #f0eeeb; font-weight: 600; }
+
+/* Main */
+.main { margin-left: 230px; flex: 1; padding: 32px 36px; }
+.page-title { font-size: 15px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: #001E61; margin-bottom: 28px; }
+
+/* Stat cards */
+.stat-row { display: flex; gap: 16px; margin-bottom: 28px; }
+.stat-card { flex: 1; background: #fff; border: 0.5px solid #d0d0d0; padding: 20px 22px; }
+.stat-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #777; margin-bottom: 8px; }
+.stat-value { font-size: 28px; font-weight: 600; color: #1a1a1a; }
+.stat-value.red { color: #D50032; }
+.stat-value.yellow { color: #b8a030; }
+
+/* Table */
+.section-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #001E61; margin-bottom: 12px; }
+.table-wrap { background: #fff; border: 0.5px solid #d0d0d0; margin-bottom: 28px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { background: #fafaf8; text-align: left; padding: 10px 14px; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #777; border-bottom: 0.5px solid #d0d0d0; }
+tbody td { padding: 10px 14px; border-bottom: 0.5px solid #eee; }
+tbody tr:hover { background: #fafaf8; }
+.badge { display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.badge-high { background: #D50032; color: #fff; }
+.badge-medium { background: #E8C547; color: #1a1a1a; }
+.badge-low { background: #5F9E6E; color: #fff; }
+
+/* Chart */
+.chart-container { background: #fff; border: 0.5px solid #d0d0d0; padding: 22px; }
+.bar-row { display: flex; align-items: center; margin-bottom: 10px; }
+.bar-label { width: 160px; font-size: 12px; font-weight: 500; color: #555; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { flex: 1; height: 22px; background: #f0eeeb; position: relative; margin: 0 12px; }
+.bar-fill { height: 100%; position: absolute; left: 0; top: 0; transition: width 0.6s ease; }
+.bar-fill.high { background: #D50032; }
+.bar-fill.medium { background: #E8C547; }
+.bar-fill.low { background: #5F9E6E; }
+.bar-count { font-size: 12px; font-weight: 600; color: #1a1a1a; width: 40px; text-align: right; }
+
+.loader { text-align: center; padding: 40px; color: #999; font-size: 13px; }
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <img src="uic_logo.png" alt="UIC">
+    <span>Readmission<br>Predictions</span>
+  </div>
+  <div class="sidebar-nav">
+    <a href="dashboard.html" class="active">Dashboard</a>
+    <a href="patients.html">Patient Search</a>
+    <a href="about.html">About</a>
+  </div>
+</nav>
+<div class="main">
+  <div class="page-title">30 Days Hospital Readmission Predictions</div>
+
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-label">High Risk Patients</div>
+      <div class="stat-value red" id="statHigh">--</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Patients Requiring Follow-Up</div>
+      <div class="stat-value yellow" id="statFollowup">--</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Average Risk Level</div>
+      <div class="stat-value" id="statAvg">--</div>
+    </div>
+  </div>
+
+  <div class="section-title">High Risk Patients Flagged Today</div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Patient ID</th>
+          <th>Disease Cohort</th>
+          <th>Risk</th>
+          <th>Level</th>
+          <th>Recommended Action</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="5" class="loader">Loading patient data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-title">Risk Distribution by Disease Cohort</div>
+  <div class="chart-container" id="chartArea">
+    <div class="loader">Loading chart...</div>
+  </div>
+</div>
+
+<script>
+const API = "https://YOUR-RENDER-URL.onrender.com";
+
+function action(level) {
+  if (level === "High") return "Schedule follow-up within 7 days, refer to case manager";
+  if (level === "Medium") return "Schedule follow-up within 14 days";
+  return "Standard discharge protocol";
+}
+
+function badgeHTML(level) {
+  const cls = level === "High" ? "badge-high" : level === "Medium" ? "badge-medium" : "badge-low";
+  return `<span class="badge ${cls}">${level}</span>`;
+}
+
+async function load() {
+  try {
+    const res = await fetch(API + "/patients");
+    const data = await res.json();
+
+    // Stats
+    const high = data.filter(p => p.risk_level === "High");
+    const followup = data.filter(p => p.risk_level === "High" || p.risk_level === "Medium");
+    const avg = data.reduce((s, p) => s + p.risk_probability, 0) / data.length;
+    document.getElementById("statHigh").textContent = high.length;
+    document.getElementById("statFollowup").textContent = followup.length;
+    document.getElementById("statAvg").textContent = (avg * 100).toFixed(1) + "%";
+
+    // Table: show high risk patients
+    const tbody = document.getElementById("tableBody");
+    if (high.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="padding:16px;color:#999;">No high risk patients found.</td></tr>';
+    } else {
+      tbody.innerHTML = high.slice(0, 50).map(p => `
+        <tr>
+          <td>${p.hadm_id}</td>
+          <td>${p.cohort}</td>
+          <td>${(p.risk_probability * 100).toFixed(1)}%</td>
+          <td>${badgeHTML(p.risk_level)}</td>
+          <td>${action(p.risk_level)}</td>
+        </tr>
+      `).join("");
+    }
+
+    // Chart: aggregate by cohort
+    const cohorts = {};
+    data.forEach(p => {
+      if (!cohorts[p.cohort]) cohorts[p.cohort] = { high: 0, medium: 0, low: 0, total: 0 };
+      cohorts[p.cohort][p.risk_level.toLowerCase()]++;
+      cohorts[p.cohort].total++;
+    });
+    const sorted = Object.entries(cohorts).sort((a, b) => b[1].total - a[1].total);
+    const maxTotal = sorted.length ? sorted[0][1].total : 1;
+
+    const chartArea = document.getElementById("chartArea");
+    chartArea.innerHTML = sorted.map(([name, c]) => {
+      const totalPct = (c.total / maxTotal * 100).toFixed(1);
+      const hmPct = ((c.high + c.medium) / maxTotal * 100).toFixed(1);
+      const hPct = (c.high / maxTotal * 100).toFixed(1);
+      return `<div class="bar-row">
+        <div class="bar-label" title="${name}">${name}</div>
+        <div class="bar-track">
+          <div class="bar-fill low" style="width:${totalPct}%"></div>
+          <div class="bar-fill medium" style="width:${hmPct}%"></div>
+          <div class="bar-fill high" style="width:${hPct}%"></div>
+        </div>
+        <div class="bar-count">${c.total}</div>
+      </div>`;
+    }).join("");
+  } catch (e) {
+    console.error(e);
+    document.getElementById("tableBody").innerHTML = '<tr><td colspan="5" class="loader">Failed to load data. Ensure the API is running.</td></tr>';
+    document.getElementById("chartArea").innerHTML = '<div class="loader">Failed to load chart data.</div>';
+  }
+}
+load();
+</script>
+</body>
+</html>

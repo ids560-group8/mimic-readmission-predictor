@@ -1,0 +1,88 @@
+import json
+import numpy as np
+import pandas as pd
+import pickle
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from pathlib import Path
+
+APP_DIR = Path(__file__).parent
+
+app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Load artifacts at startup
+with open(APP_DIR / "meta_model.pkl", "rb") as f:
+    model = pickle.load(f)
+
+with open(APP_DIR / "feature_cols_final.json") as f:
+    feature_cols = json.load(f)
+
+df = pd.read_parquet(APP_DIR / "final_merged_test.parquet")
+
+
+def classify_risk(prob: float) -> str:
+    if prob >= 0.5:
+        return "High"
+    elif prob >= 0.25:
+        return "Medium"
+    return "Low"
+
+
+def predict_row(row: pd.Series) -> float:
+    X = row[feature_cols].fillna(0).values.reshape(1, -1)
+    return float(model.predict_proba(X)[0][1])
+
+
+class PredictRequest(BaseModel):
+    hadm_id: int
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.get("/patients")
+def get_patients():
+    results = []
+    for _, row in df.iterrows():
+        prob = predict_row(row)
+        results.append({
+            "hadm_id": int(row["hadm_id"]),
+            "age": float(row.get("age", 0)),
+            "los": float(row.get("los", 0)),
+            "cohort": str(row.get("cohort", "Unknown")),
+            "risk_probability": round(prob, 4),
+            "risk_level": classify_risk(prob),
+            "readmit_30d": int(row.get("readmit_30d", 0)),
+        })
+    return results
+
+
+@app.post("/predict")
+def predict(req: PredictRequest):
+    match = df[df["hadm_id"] == req.hadm_id]
+    if match.empty:
+        raise HTTPException(status_code=404, detail="Patient not found")
+    row = match.iloc[0]
+    prob = predict_row(row)
+    return {
+        "hadm_id": int(row["hadm_id"]),
+        "risk_probability": round(prob, 4),
+        "risk_level": classify_risk(prob),
+        "age": float(row.get("age", 0)),
+        "los": float(row.get("los", 0)),
+        "sofa": float(row.get("sofa", 0)),
+        "apsiii": float(row.get("apsiii", 0)),
+        "elixhauser": float(row.get("elixhauser_vanwalraven", 0)),
+        "ml_risk": float(row.get("ml_risk", 0)),
+        "cohort": str(row.get("cohort", "Unknown")),
+        "readmit_30d": int(row.get("readmit_30d", 0)),
+    }

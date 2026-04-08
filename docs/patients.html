@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patient Search</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1EE; color: #1a1a1a; display: flex; min-height: 100vh; }
+
+.sidebar { width: 230px; background: #fff; border-right: 0.5px solid #d0d0d0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 10; }
+.sidebar-logo { padding: 24px 20px 16px; display: flex; align-items: center; gap: 12px; }
+.sidebar-logo img { width: 40px; height: 40px; border-radius: 50%; }
+.sidebar-logo span { font-size: 13px; font-weight: 600; color: #001E61; letter-spacing: 0.03em; line-height: 1.3; }
+.sidebar-nav { padding: 8px 0; flex: 1; }
+.sidebar-nav a { display: block; padding: 11px 24px; font-size: 13px; font-weight: 500; color: #555; text-decoration: none; letter-spacing: 0.04em; text-transform: uppercase; border-left: 3px solid transparent; }
+.sidebar-nav a:hover { color: #001E61; background: #f7f7f5; }
+.sidebar-nav a.active { color: #001E61; border-left-color: #001E61; background: #f0eeeb; font-weight: 600; }
+
+.main { margin-left: 230px; flex: 1; display: flex; min-height: 100vh; }
+
+/* Left panel */
+.left-panel { width: 360px; border-right: 0.5px solid #d0d0d0; background: #fff; display: flex; flex-direction: column; }
+.left-header { padding: 20px; border-bottom: 0.5px solid #d0d0d0; }
+.page-title { font-size: 15px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: #001E61; margin-bottom: 14px; }
+.search-input { width: 100%; padding: 9px 12px; font-size: 13px; border: 0.5px solid #d0d0d0; background: #fafaf8; outline: none; font-family: inherit; }
+.search-input:focus { border-color: #001E61; }
+.filter-row { display: flex; gap: 8px; margin-top: 10px; }
+.filter-select { flex: 1; padding: 8px 10px; font-size: 12px; border: 0.5px solid #d0d0d0; background: #fafaf8; font-family: inherit; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.patient-list { flex: 1; overflow-y: auto; }
+.patient-item { padding: 12px 20px; border-bottom: 0.5px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+.patient-item:hover { background: #fafaf8; }
+.patient-item.selected { background: #f0eeeb; border-left: 3px solid #001E61; }
+.pi-id { font-size: 13px; font-weight: 500; }
+.pi-cohort { font-size: 11px; color: #888; margin-top: 2px; }
+.pi-risk { font-size: 12px; font-weight: 600; }
+.pi-risk.high { color: #D50032; }
+.pi-risk.medium { color: #b8a030; }
+.pi-risk.low { color: #5F9E6E; }
+
+/* Right panel */
+.right-panel { flex: 1; padding: 32px 36px; overflow-y: auto; }
+.empty-state { color: #999; font-size: 13px; margin-top: 80px; text-align: center; }
+
+.detail-section { margin-bottom: 24px; }
+.detail-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #777; margin-bottom: 8px; }
+
+.info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.info-box { background: #fff; border: 0.5px solid #d0d0d0; padding: 14px 16px; }
+.info-box .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #999; margin-bottom: 4px; font-weight: 500; }
+.info-box .value { font-size: 16px; font-weight: 600; }
+
+.risk-banner { padding: 28px; text-align: center; border: 0.5px solid #d0d0d0; }
+.risk-pct { font-size: 48px; font-weight: 700; }
+.risk-label { font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+
+.factor-list { list-style: none; }
+.factor-list li { padding: 8px 0; border-bottom: 0.5px solid #eee; font-size: 13px; color: #444; display: flex; align-items: center; gap: 8px; }
+.factor-list li::before { content: ""; display: inline-block; width: 6px; height: 6px; background: #001E61; flex-shrink: 0; }
+
+.action-box { padding: 18px 20px; border: 0.5px solid #d0d0d0; font-size: 13px; line-height: 1.6; }
+.action-box.high { background: #fdf0f3; border-color: #D50032; }
+.action-box.medium { background: #fdf8e8; border-color: #E8C547; }
+.action-box.low { background: #f0f7f1; border-color: #5F9E6E; }
+.action-box-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 6px; }
+
+.badge { display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+.badge-high { background: #D50032; color: #fff; }
+.badge-medium { background: #E8C547; color: #1a1a1a; }
+.badge-low { background: #5F9E6E; color: #fff; }
+
+.gt-row { margin-top: 12px; font-size: 12px; color: #888; }
+</style>
+</head>
+<body>
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <img src="uic_logo.png" alt="UIC">
+    <span>Readmission<br>Predictions</span>
+  </div>
+  <div class="sidebar-nav">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="patients.html" class="active">Patient Search</a>
+    <a href="about.html">About</a>
+  </div>
+</nav>
+
+<div class="main">
+  <div class="left-panel">
+    <div class="left-header">
+      <div class="page-title">Patient Search</div>
+      <input class="search-input" id="searchBox" type="text" placeholder="Search by patient ID...">
+      <div class="filter-row">
+        <select class="filter-select" id="filterRisk">
+          <option value="">All Risk Levels</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+        <select class="filter-select" id="filterCohort">
+          <option value="">All Cohorts</option>
+        </select>
+      </div>
+    </div>
+    <div class="patient-list" id="patientList">
+      <div style="padding:20px;color:#999;font-size:13px;">Loading...</div>
+    </div>
+  </div>
+
+  <div class="right-panel" id="rightPanel">
+    <div class="empty-state">Select a patient from the list to view details.</div>
+  </div>
+</div>
+
+<script>
+const API = "https://YOUR-RENDER-URL.onrender.com";
+let patients = [];
+
+function renderList() {
+  const q = document.getElementById("searchBox").value.trim();
+  const rl = document.getElementById("filterRisk").value;
+  const co = document.getElementById("filterCohort").value;
+
+  let filtered = patients;
+  if (q) filtered = filtered.filter(p => String(p.hadm_id).includes(q));
+  if (rl) filtered = filtered.filter(p => p.risk_level === rl);
+  if (co) filtered = filtered.filter(p => p.cohort === co);
+
+  const list = document.getElementById("patientList");
+  if (!filtered.length) {
+    list.innerHTML = '<div style="padding:20px;color:#999;font-size:13px;">No patients match your filters.</div>';
+    return;
+  }
+  list.innerHTML = filtered.slice(0, 200).map(p => {
+    const cls = p.risk_level.toLowerCase();
+    return `<div class="patient-item" data-id="${p.hadm_id}">
+      <div><div class="pi-id">${p.hadm_id}</div><div class="pi-cohort">${p.cohort}</div></div>
+      <div class="pi-risk ${cls}">${(p.risk_probability*100).toFixed(1)}%</div>
+    </div>`;
+  }).join("");
+
+  list.querySelectorAll(".patient-item").forEach(el => {
+    el.addEventListener("click", () => selectPatient(parseInt(el.dataset.id)));
+  });
+}
+
+function deriveFactors(d) {
+  const factors = [];
+  if (d.los > 7) factors.push("Extended hospital stay");
+  if (d.sofa > 5) factors.push("Elevated organ dysfunction indicators");
+  if (d.apsiii > 50) factors.push("High acute severity at admission");
+  if (d.elixhauser > 10) factors.push("Multiple chronic conditions");
+  if (d.ml_risk > 0.5) factors.push("Structured clinical indicators suggest elevated risk");
+  if (d.age > 75) factors.push("Advanced patient age");
+  if (factors.length === 0) factors.push("No major individual risk factors identified");
+  return factors;
+}
+
+function actionText(level) {
+  if (level === "High") return "Schedule follow-up within 7 days, refer to case manager";
+  if (level === "Medium") return "Schedule follow-up within 14 days";
+  return "Standard discharge protocol";
+}
+
+async function selectPatient(hadm_id) {
+  document.querySelectorAll(".patient-item").forEach(el => el.classList.remove("selected"));
+  const el = document.querySelector(`.patient-item[data-id="${hadm_id}"]`);
+  if (el) el.classList.add("selected");
+
+  const panel = document.getElementById("rightPanel");
+  panel.innerHTML = '<div class="empty-state">Loading patient details...</div>';
+
+  try {
+    const res = await fetch(API + "/predict", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({hadm_id})
+    });
+    const d = await res.json();
+    const lvl = d.risk_level.toLowerCase();
+    const pct = (d.risk_probability * 100).toFixed(1);
+    const factors = deriveFactors(d);
+    const riskColor = lvl === "high" ? "#D50032" : lvl === "medium" ? "#E8C547" : "#5F9E6E";
+
+    panel.innerHTML = `
+      <div class="detail-section">
+        <div class="detail-label">Patient Information</div>
+        <div class="info-grid">
+          <div class="info-box"><div class="label">Patient ID</div><div class="value">${d.hadm_id}</div></div>
+          <div class="info-box"><div class="label">Age</div><div class="value">${Math.round(d.age)}</div></div>
+          <div class="info-box"><div class="label">Length of Stay</div><div class="value">${d.los.toFixed(1)} days</div></div>
+          <div class="info-box"><div class="label">Disease Cohort</div><div class="value" style="font-size:13px;">${d.cohort}</div></div>
+          <div class="info-box"><div class="label">Chronic Conditions</div><div class="value">${d.elixhauser > 0 ? "Multiple" : "None flagged"}</div></div>
+          <div class="info-box"><div class="label">Ground Truth</div><div class="value">${d.readmit_30d ? "Readmitted" : "Not Readmitted"}</div></div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-label">Readmission Risk Assessment</div>
+        <div class="risk-banner" style="background:${riskColor}10; border-color:${riskColor};">
+          <div class="risk-pct" style="color:${riskColor};">${pct}%</div>
+          <div class="risk-label" style="color:${riskColor};">${d.risk_level} Readmission Risk</div>
+        </div>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-label">Top Contributing Factors</div>
+        <ul class="factor-list">
+          ${factors.map(f => `<li>${f}</li>`).join("")}
+        </ul>
+      </div>
+
+      <div class="detail-section">
+        <div class="detail-label">Recommended Action</div>
+        <div class="action-box ${lvl}">
+          <div class="action-box-title">${d.risk_level} Risk Protocol</div>
+          ${actionText(d.risk_level)}
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    panel.innerHTML = '<div class="empty-state">Failed to load patient details.</div>';
+  }
+}
+
+async function init() {
+  try {
+    const res = await fetch(API + "/patients");
+    patients = await res.json();
+    patients.sort((a, b) => b.risk_probability - a.risk_probability);
+
+    // Populate cohort filter
+    const cohorts = [...new Set(patients.map(p => p.cohort))].sort();
+    const sel = document.getElementById("filterCohort");
+    cohorts.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); });
+
+    renderList();
+  } catch (e) {
+    document.getElementById("patientList").innerHTML = '<div style="padding:20px;color:#999;font-size:13px;">Failed to load patients. Ensure the API is running.</div>';
+  }
+}
+
+document.getElementById("searchBox").addEventListener("input", renderList);
+document.getElementById("filterRisk").addEventListener("change", renderList);
+document.getElementById("filterCohort").addEventListener("change", renderList);
+
+init();
+</script>
+</body>
+</html>
