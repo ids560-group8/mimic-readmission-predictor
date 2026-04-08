@@ -17,7 +17,7 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 .sidebar-nav a:hover { color: #001E61; background: #f7f7f5; }
 .sidebar-nav a.active { color: #001E61; border-left-color: #001E61; background: #f0eeeb; font-weight: 600; }
 
-.main { margin-left: 230px; flex: 1; padding: 32px 36px; max-width: 800px; }
+.main { margin-left: 230px; flex: 1; padding: 32px 36px; }
 .page-title { font-size: 15px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; color: #001E61; margin-bottom: 28px; }
 
 .card { background: #fff; border: 0.5px solid #d0d0d0; padding: 28px 30px; margin-bottom: 20px; }
@@ -26,8 +26,10 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 .card h3 { font-size: 14px; font-weight: 400; color: #555; margin-bottom: 16px; }
 .card p { font-size: 13px; line-height: 1.7; color: #444; margin-bottom: 10px; }
 
-.team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.team-member { padding: 12px 14px; background: #fafaf8; font-size: 13px; font-weight: 500; color: #333; }
+.team-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.team-member { padding: 18px 14px; background: #fafaf8; text-align: center; }
+.team-member img { width: 80px; height: 80px; object-fit: cover; display: block; margin: 0 auto 10px; }
+.team-member .name { font-size: 13px; font-weight: 500; color: #333; }
 
 .meta-row { font-size: 13px; color: #444; padding: 8px 0; border-bottom: 0.5px solid #eee; display: flex; }
 .meta-label { width: 140px; font-weight: 500; color: #777; text-transform: uppercase; font-size: 11px; letter-spacing: 0.04em; flex-shrink: 0; padding-top: 1px; }
@@ -62,12 +64,12 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
   <div class="card">
     <div class="card-title">Team</div>
     <div class="team-grid">
-      <div class="team-member">Ankita Ghosh</div>
-      <div class="team-member">Areesha Kewalramani</div>
-      <div class="team-member">Chitvan Burma</div>
-      <div class="team-member">Jomphon Vongasvathepchai</div>
-      <div class="team-member">Josephine Chou</div>
-      <div class="team-member">Matthew Kenner</div>
+      <div class="team-member"><img src="avatar_ankita.jpg" alt="Ankita Ghosh"><div class="name">Ankita Ghosh</div></div>
+      <div class="team-member"><img src="avatar_areesha.jpg" alt="Areesha Kewalramani"><div class="name">Areesha Kewalramani</div></div>
+      <div class="team-member"><img src="avatar_chitvan.jpg" alt="Chitvan Burma"><div class="name">Chitvan Burma</div></div>
+      <div class="team-member"><img src="avatar_jomphon.jpg" alt="Jomphon Vongasvathepchai"><div class="name">Jomphon Vongasvathepchai</div></div>
+      <div class="team-member"><img src="avatar_josephine.jpg" alt="Josephine Chou"><div class="name">Josephine Chou</div></div>
+      <div class="team-member"><img src="avatar_matthew.jpg" alt="Matthew Kenner"><div class="name">Matthew Kenner</div></div>
     </div>
   </div>
 

@@ -35,8 +35,8 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 .pi-cohort { font-size: 11px; color: #888; margin-top: 2px; }
 .pi-risk { font-size: 12px; font-weight: 600; }
 .pi-risk.high { color: #D50032; }
-.pi-risk.medium { color: #c4a800; }
-.pi-risk.low { color: #78de40; }
+.pi-risk.medium { color: #d4a900; }
+.pi-risk.low { color: #4cb42c; }
 
 /* Right panel */
 .right-panel { flex: 1; padding: 32px 36px; overflow-y: auto; }
@@ -60,16 +60,20 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 
 .action-box { padding: 18px 20px; border: 0.5px solid #d0d0d0; font-size: 13px; line-height: 1.6; }
 .action-box.high { background: #fdf0f3; border-color: #D50032; }
-.action-box.medium { background: #fdf8e8; border-color: #ffde57; }
-.action-box.low { background: #f0f7f1; border-color: #78de40; }
+.action-box.medium { background: #fdf8e8; border-color: #f7ce21; }
+.action-box.low { background: #f0f7f1; border-color: #4cb42c; }
 .action-box-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 6px; }
 
 .badge { display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .badge-high { background: #D50032; color: #fff; }
-.badge-medium { background: #ffde57; color: #1a1a1a; }
-.badge-low { background: #78de40; color: #fff; }
+.badge-medium { background: #f7ce21; color: #1a1a1a; }
+.badge-low { background: #4cb42c; color: #fff; }
 
 .gt-row { margin-top: 12px; font-size: 12px; color: #888; }
+.loading-overlay { position: fixed; top: 0; left: 230px; right: 0; bottom: 0; background: #F2F1EE; display: flex; align-items: center; justify-content: center; z-index: 100; flex-direction: column; gap: 12px; }
+.loading-overlay .spinner { width: 28px; height: 28px; border: 3px solid #ddd; border-top-color: #001E61; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-overlay .msg { font-size: 13px; color: #777; }
 </style>
 </head>
 <body>
@@ -84,6 +88,11 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
     <a href="about.html">About</a>
   </div>
 </nav>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="msg">Connecting to server, please wait...</div>
+</div>
 
 <div class="main">
   <div class="left-panel">
@@ -180,7 +189,7 @@ async function selectPatient(hadm_id) {
     const lvl = d.risk_level.toLowerCase();
     const pct = (d.risk_probability * 100).toFixed(1);
     const factors = deriveFactors(d);
-    const riskColor = lvl === "high" ? "#D50032" : lvl === "medium" ? "#ffde57" : "#78de40";
+    const riskColor = lvl === "high" ? "#D50032" : lvl === "medium" ? "#f7ce21" : "#4cb42c";
 
     panel.innerHTML = `
       <div class="detail-section">
@@ -224,10 +233,14 @@ async function selectPatient(hadm_id) {
 }
 
 async function init() {
+  const overlay = document.getElementById("loadingOverlay");
   try {
+    await fetch(API + "/health");
+    overlay.querySelector(".msg").textContent = "Loading patient data...";
     const res = await fetch(API + "/patients");
     patients = await res.json();
     patients.sort((a, b) => b.risk_probability - a.risk_probability);
+    overlay.style.display = "none";
 
     // Populate cohort filter
     const cohorts = [...new Set(patients.map(p => p.cohort))].sort();
@@ -241,6 +254,7 @@ async function init() {
     const hadmId = params.get("hadm_id");
     if (hadmId) selectPatient(parseInt(hadmId));
   } catch (e) {
+    document.getElementById("loadingOverlay").style.display = "none";
     document.getElementById("patientList").innerHTML = '<div style="padding:20px;color:#999;font-size:13px;">Failed to load patients. Ensure the API is running.</div>';
   }
 }

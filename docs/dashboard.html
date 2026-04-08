@@ -28,10 +28,16 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 .stat-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #777; margin-bottom: 8px; }
 .stat-value { font-size: 28px; font-weight: 600; color: #1a1a1a; }
 .stat-value.red { color: #D50032; }
-.stat-value.yellow { color: #c4a800; }
+.stat-value.yellow { color: #d4a900; }
 
 /* Table */
 .section-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #001E61; margin-bottom: 12px; }
+.toggle-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 12px; }
+.toggle-header .section-title { margin-bottom: 0; }
+.toggle-arrow { font-size: 12px; color: #999; transition: transform 0.2s; }
+.toggle-arrow.open { transform: rotate(180deg); }
+.collapsible { overflow: hidden; transition: max-height 0.3s ease; max-height: 600px; }
+.collapsible.collapsed { max-height: 0; }
 .table-wrap { background: #fff; border: 0.5px solid #d0d0d0; margin-bottom: 28px; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead th { background: #fafaf8; text-align: left; padding: 10px 14px; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #777; border-bottom: 0.5px solid #d0d0d0; }
@@ -39,8 +45,8 @@ tbody td { padding: 10px 14px; border-bottom: 0.5px solid #eee; }
 tbody tr:hover { background: #f0eeeb; }
 .badge { display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .badge-high { background: #D50032; color: #fff; }
-.badge-medium { background: #ffde57; color: #1a1a1a; }
-.badge-low { background: #78de40; color: #fff; }
+.badge-medium { background: #f7ce21; color: #1a1a1a; }
+.badge-low { background: #4cb42c; color: #fff; }
 
 /* Chart */
 .chart-container { background: #fff; border: 0.5px solid #d0d0d0; padding: 22px; }
@@ -49,11 +55,15 @@ tbody tr:hover { background: #f0eeeb; }
 .bar-track { flex: 1; height: 22px; background: #f0eeeb; position: relative; margin: 0 12px; }
 .bar-fill { height: 100%; position: absolute; left: 0; top: 0; transition: width 0.6s ease; }
 .bar-fill.high { background: #D50032; }
-.bar-fill.medium { background: #ffde57; }
-.bar-fill.low { background: #78de40; }
+.bar-fill.medium { background: #f7ce21; }
+.bar-fill.low { background: #4cb42c; }
 .bar-count { font-size: 12px; font-weight: 600; color: #1a1a1a; width: 40px; text-align: right; }
 
 .loader { text-align: center; padding: 40px; color: #999; font-size: 13px; }
+.loading-overlay { position: fixed; top: 0; left: 230px; right: 0; bottom: 0; background: #F2F1EE; display: flex; align-items: center; justify-content: center; z-index: 100; flex-direction: column; gap: 12px; }
+.loading-overlay .spinner { width: 28px; height: 28px; border: 3px solid #ddd; border-top-color: #001E61; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-overlay .msg { font-size: 13px; color: #777; }
 </style>
 </head>
 <body>
@@ -86,7 +96,11 @@ tbody tr:hover { background: #f0eeeb; }
     </div>
   </div>
 
-  <div class="section-title">High Risk Patients Flagged Today</div>
+  <div class="toggle-header" onclick="toggleTable()">
+    <div class="section-title">High Risk Patients Flagged Today <span id="tableCount"></span></div>
+    <span class="toggle-arrow open" id="toggleArrow">&#9660;</span>
+  </div>
+  <div class="collapsible" id="tableCollapsible">
   <div class="table-wrap">
     <table>
       <thead>
@@ -103,11 +117,17 @@ tbody tr:hover { background: #f0eeeb; }
       </tbody>
     </table>
   </div>
+  </div>
 
   <div class="section-title">Risk Distribution by Disease Cohort</div>
   <div class="chart-container" id="chartArea">
     <div class="loader">Loading chart...</div>
   </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="msg">Connecting to server, please wait...</div>
 </div>
 
 <script>
@@ -125,9 +145,14 @@ function badgeHTML(level) {
 }
 
 async function load() {
+  const overlay = document.getElementById("loadingOverlay");
   try {
+    // Warm up server first
+    await fetch(API + "/health");
+    overlay.querySelector(".msg").textContent = "Loading patient data...";
     const res = await fetch(API + "/patients");
     const data = await res.json();
+    overlay.style.display = "none";
 
     // Stats
     const high = data.filter(p => p.risk_level === "High");
@@ -139,10 +164,11 @@ async function load() {
 
     // Table: show high risk patients
     const tbody = document.getElementById("tableBody");
+    document.getElementById("tableCount").textContent = `(${high.length})`;
     if (high.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" style="padding:16px;color:#999;">No high risk patients found.</td></tr>';
     } else {
-      tbody.innerHTML = high.slice(0, 50).map(p => `
+      tbody.innerHTML = high.slice(0, 10).map(p => `
         <tr style="cursor:pointer" onclick="window.location.href='patients.html?hadm_id=${p.hadm_id}'">
           <td>${p.hadm_id}</td>
           <td>${p.cohort}</td>
@@ -180,10 +206,18 @@ async function load() {
     }).join("");
   } catch (e) {
     console.error(e);
+    document.getElementById("loadingOverlay").style.display = "none";
     document.getElementById("tableBody").innerHTML = '<tr><td colspan="5" class="loader">Failed to load data. Ensure the API is running.</td></tr>';
     document.getElementById("chartArea").innerHTML = '<div class="loader">Failed to load chart data.</div>';
   }
 }
+function toggleTable() {
+  const el = document.getElementById("tableCollapsible");
+  const arrow = document.getElementById("toggleArrow");
+  el.classList.toggle("collapsed");
+  arrow.classList.toggle("open");
+}
+
 load();
 </script>
 </body>
