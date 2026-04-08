@@ -25,6 +25,7 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 /* Stat cards */
 .stat-row { display: flex; gap: 16px; margin-bottom: 28px; }
 .stat-card { flex: 1; background: #fff; border: 0.5px solid #d0d0d0; padding: 20px 22px; }
+.stat-card:hover { background: #fafaf8; }
 .stat-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #777; margin-bottom: 8px; }
 .stat-value { font-size: 28px; font-weight: 600; color: #1a1a1a; }
 .stat-value.red { color: #D50032; }
@@ -32,12 +33,6 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 
 /* Table */
 .section-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #001E61; margin-bottom: 12px; }
-.toggle-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 12px; }
-.toggle-header .section-title { margin-bottom: 0; }
-.toggle-arrow { font-size: 12px; color: #999; transition: transform 0.2s; }
-.toggle-arrow.open { transform: rotate(180deg); }
-.collapsible { overflow: hidden; transition: max-height 0.3s ease; max-height: 600px; }
-.collapsible.collapsed { max-height: 0; }
 .table-wrap { background: #fff; border: 0.5px solid #d0d0d0; margin-bottom: 28px; overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead th { background: #fafaf8; text-align: left; padding: 10px 14px; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #777; border-bottom: 0.5px solid #d0d0d0; }
@@ -82,13 +77,15 @@ tbody tr:hover { background: #f0eeeb; }
   <div class="page-title">30 Days Hospital Readmission Predictions</div>
 
   <div class="stat-row">
-    <div class="stat-card">
+    <div class="stat-card" style="cursor:pointer" onclick="downloadCSV('high')" title="Click to download list">
       <div class="stat-label">High Risk Patients</div>
       <div class="stat-value red" id="statHigh">--</div>
+      <div style="font-size:10px;color:#999;margin-top:4px;">CLICK TO DOWNLOAD CSV</div>
     </div>
-    <div class="stat-card">
+    <div class="stat-card" style="cursor:pointer" onclick="downloadCSV('followup')" title="Click to download list">
       <div class="stat-label">Patients Requiring Follow-Up</div>
       <div class="stat-value yellow" id="statFollowup">--</div>
+      <div style="font-size:10px;color:#999;margin-top:4px;">CLICK TO DOWNLOAD CSV</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Average Risk Level</div>
@@ -96,11 +93,7 @@ tbody tr:hover { background: #f0eeeb; }
     </div>
   </div>
 
-  <div class="toggle-header" onclick="toggleTable()">
-    <div class="section-title">High Risk Patients Flagged Today <span id="tableCount"></span></div>
-    <span class="toggle-arrow open" id="toggleArrow">&#9660;</span>
-  </div>
-  <div class="collapsible" id="tableCollapsible">
+  <div class="section-title" id="tableTitle">High Risk Patients Flagged Today</div>
   <div class="table-wrap">
     <table>
       <thead>
@@ -117,7 +110,6 @@ tbody tr:hover { background: #f0eeeb; }
       </tbody>
     </table>
   </div>
-  </div>
 
   <div class="section-title">Risk Distribution by Disease Cohort</div>
   <div class="chart-container" id="chartArea">
@@ -133,6 +125,8 @@ tbody tr:hover { background: #f0eeeb; }
 <script>
 const API = "https://mimic-readmission-predictor.onrender.com";
 
+let allData = [];
+
 function action(level) {
   if (level === "High") return "Schedule follow-up within 7 days, refer to case manager";
   if (level === "Medium") return "Schedule follow-up within 14 days";
@@ -144,6 +138,28 @@ function badgeHTML(level) {
   return `<span class="badge ${cls}">${level}</span>`;
 }
 
+function downloadCSV(type) {
+  let rows;
+  let filename;
+  if (type === "high") {
+    rows = allData.filter(p => p.risk_level === "High");
+    filename = "high_risk_patients.csv";
+  } else {
+    rows = allData.filter(p => p.risk_level === "High" || p.risk_level === "Medium");
+    filename = "followup_patients.csv";
+  }
+  rows.sort((a, b) => b.risk_probability - a.risk_probability);
+  const header = "Patient ID,Disease Cohort,Risk %,Risk Level,Recommended Action\n";
+  const csv = header + rows.map(p =>
+    `${p.hadm_id},${p.cohort},${(p.risk_probability*100).toFixed(1)}%,${p.risk_level},"${action(p.risk_level)}"`
+  ).join("\n");
+  const blob = new Blob([csv], {type: "text/csv"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+}
+
 async function load() {
   const overlay = document.getElementById("loadingOverlay");
   try {
@@ -152,6 +168,7 @@ async function load() {
     overlay.querySelector(".msg").textContent = "Loading patient data...";
     const res = await fetch(API + "/patients");
     const data = await res.json();
+    allData = data;
     overlay.style.display = "none";
 
     // Stats
@@ -162,9 +179,10 @@ async function load() {
     document.getElementById("statFollowup").textContent = followup.length;
     document.getElementById("statAvg").textContent = (avg * 100).toFixed(1) + "%";
 
-    // Table: show high risk patients
+    // Table: top 10 highest risk patients
     const tbody = document.getElementById("tableBody");
-    document.getElementById("tableCount").textContent = `(${high.length})`;
+    high.sort((a, b) => b.risk_probability - a.risk_probability);
+    document.getElementById("tableTitle").textContent = `High Risk Patients Flagged Today (${high.length})`;
     if (high.length === 0) {
       tbody.innerHTML = '<tr><td colspan="5" style="padding:16px;color:#999;">No high risk patients found.</td></tr>';
     } else {
@@ -211,13 +229,6 @@ async function load() {
     document.getElementById("chartArea").innerHTML = '<div class="loader">Failed to load chart data.</div>';
   }
 }
-function toggleTable() {
-  const el = document.getElementById("tableCollapsible");
-  const arrow = document.getElementById("toggleArrow");
-  el.classList.toggle("collapsed");
-  arrow.classList.toggle("open");
-}
-
 load();
 </script>
 </body>

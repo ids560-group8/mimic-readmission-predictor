@@ -243,7 +243,8 @@ async function init() {
     overlay.style.display = "none";
 
     // Populate cohort filter
-    const cohorts = [...new Set(patients.map(p => p.cohort))].sort();
+    const cohorts = [...new Set(patients.map(p => p.cohort))].sort().filter(c => c !== "Other");
+    cohorts.push("Other");
     const sel = document.getElementById("filterCohort");
     cohorts.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); });
 
