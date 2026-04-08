@@ -26,18 +26,28 @@ with open(APP_DIR / "feature_cols_final.json") as f:
 
 df = pd.read_parquet(APP_DIR / "final_merged_test.parquet")
 
+# Batch predict once at startup
+X_all = df[feature_cols].fillna(0).values
+probs_all = model.predict_proba(X_all)[:, 1]
+df["risk_probability"] = np.round(probs_all, 4)
+df["risk_level"] = pd.cut(
+    df["risk_probability"],
+    bins=[-0.01, 0.25, 0.5, 1.01],
+    labels=["Low", "Medium", "High"],
+)
 
-def classify_risk(prob: float) -> str:
-    if prob >= 0.5:
-        return "High"
-    elif prob >= 0.25:
-        return "Medium"
-    return "Low"
-
-
-def predict_row(row: pd.Series) -> float:
-    X = row[feature_cols].fillna(0).values.reshape(1, -1)
-    return float(model.predict_proba(X)[0][1])
+# Pre-build patient list response
+patients_cache = []
+for _, row in df.iterrows():
+    patients_cache.append({
+        "hadm_id": int(row["hadm_id"]),
+        "age": float(row.get("age", 0)),
+        "los": float(row.get("los", 0)),
+        "cohort": str(row.get("cohort", "Unknown")),
+        "risk_probability": float(row["risk_probability"]),
+        "risk_level": str(row["risk_level"]),
+        "readmit_30d": int(row.get("readmit_30d", 0)),
+    })
 
 
 class PredictRequest(BaseModel):
@@ -51,19 +61,7 @@ def health():
 
 @app.get("/patients")
 def get_patients():
-    results = []
-    for _, row in df.iterrows():
-        prob = predict_row(row)
-        results.append({
-            "hadm_id": int(row["hadm_id"]),
-            "age": float(row.get("age", 0)),
-            "los": float(row.get("los", 0)),
-            "cohort": str(row.get("cohort", "Unknown")),
-            "risk_probability": round(prob, 4),
-            "risk_level": classify_risk(prob),
-            "readmit_30d": int(row.get("readmit_30d", 0)),
-        })
-    return results
+    return patients_cache
 
 
 @app.post("/predict")
@@ -72,11 +70,10 @@ def predict(req: PredictRequest):
     if match.empty:
         raise HTTPException(status_code=404, detail="Patient not found")
     row = match.iloc[0]
-    prob = predict_row(row)
     return {
         "hadm_id": int(row["hadm_id"]),
-        "risk_probability": round(prob, 4),
-        "risk_level": classify_risk(prob),
+        "risk_probability": float(row["risk_probability"]),
+        "risk_level": str(row["risk_level"]),
         "age": float(row.get("age", 0)),
         "los": float(row.get("los", 0)),
         "sofa": float(row.get("sofa", 0)),
