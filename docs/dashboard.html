@@ -28,7 +28,7 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 .stat-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #777; margin-bottom: 8px; }
 .stat-value { font-size: 28px; font-weight: 600; color: #1a1a1a; }
 .stat-value.red { color: #D50032; }
-.stat-value.yellow { color: #b8a030; }
+.stat-value.yellow { color: #c4a800; }
 
 /* Table */
 .section-title { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #001E61; margin-bottom: 12px; }
@@ -36,11 +36,11 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 thead th { background: #fafaf8; text-align: left; padding: 10px 14px; font-weight: 500; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #777; border-bottom: 0.5px solid #d0d0d0; }
 tbody td { padding: 10px 14px; border-bottom: 0.5px solid #eee; }
-tbody tr:hover { background: #fafaf8; }
+tbody tr:hover { background: #f0eeeb; }
 .badge { display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .badge-high { background: #D50032; color: #fff; }
-.badge-medium { background: #E8C547; color: #1a1a1a; }
-.badge-low { background: #5F9E6E; color: #fff; }
+.badge-medium { background: #ffde57; color: #1a1a1a; }
+.badge-low { background: #78de40; color: #fff; }
 
 /* Chart */
 .chart-container { background: #fff; border: 0.5px solid #d0d0d0; padding: 22px; }
@@ -49,8 +49,8 @@ tbody tr:hover { background: #fafaf8; }
 .bar-track { flex: 1; height: 22px; background: #f0eeeb; position: relative; margin: 0 12px; }
 .bar-fill { height: 100%; position: absolute; left: 0; top: 0; transition: width 0.6s ease; }
 .bar-fill.high { background: #D50032; }
-.bar-fill.medium { background: #E8C547; }
-.bar-fill.low { background: #5F9E6E; }
+.bar-fill.medium { background: #ffde57; }
+.bar-fill.low { background: #78de40; }
 .bar-count { font-size: 12px; font-weight: 600; color: #1a1a1a; width: 40px; text-align: right; }
 
 .loader { text-align: center; padding: 40px; color: #999; font-size: 13px; }
@@ -111,7 +111,7 @@ tbody tr:hover { background: #fafaf8; }
 </div>
 
 <script>
-const API = "https://mimic-readmission-predictor.onrender.com";
+const API = "https://YOUR-RENDER-URL.onrender.com";
 
 function action(level) {
   if (level === "High") return "Schedule follow-up within 7 days, refer to case manager";
@@ -143,7 +143,7 @@ async function load() {
       tbody.innerHTML = '<tr><td colspan="5" style="padding:16px;color:#999;">No high risk patients found.</td></tr>';
     } else {
       tbody.innerHTML = high.slice(0, 50).map(p => `
-        <tr>
+        <tr style="cursor:pointer" onclick="window.location.href='patients.html?hadm_id=${p.hadm_id}'">
           <td>${p.hadm_id}</td>
           <td>${p.cohort}</td>
           <td>${(p.risk_probability * 100).toFixed(1)}%</td>

@@ -35,8 +35,8 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 .pi-cohort { font-size: 11px; color: #888; margin-top: 2px; }
 .pi-risk { font-size: 12px; font-weight: 600; }
 .pi-risk.high { color: #D50032; }
-.pi-risk.medium { color: #b8a030; }
-.pi-risk.low { color: #5F9E6E; }
+.pi-risk.medium { color: #c4a800; }
+.pi-risk.low { color: #78de40; }
 
 /* Right panel */
 .right-panel { flex: 1; padding: 32px 36px; overflow-y: auto; }
@@ -60,14 +60,14 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 
 .action-box { padding: 18px 20px; border: 0.5px solid #d0d0d0; font-size: 13px; line-height: 1.6; }
 .action-box.high { background: #fdf0f3; border-color: #D50032; }
-.action-box.medium { background: #fdf8e8; border-color: #E8C547; }
-.action-box.low { background: #f0f7f1; border-color: #5F9E6E; }
+.action-box.medium { background: #fdf8e8; border-color: #ffde57; }
+.action-box.low { background: #f0f7f1; border-color: #78de40; }
 .action-box-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 6px; }
 
 .badge { display: inline-block; padding: 3px 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 .badge-high { background: #D50032; color: #fff; }
-.badge-medium { background: #E8C547; color: #1a1a1a; }
-.badge-low { background: #5F9E6E; color: #fff; }
+.badge-medium { background: #ffde57; color: #1a1a1a; }
+.badge-low { background: #78de40; color: #fff; }
 
 .gt-row { margin-top: 12px; font-size: 12px; color: #888; }
 </style>
@@ -113,7 +113,7 @@ body { font-family: "Segoe UI", Helvetica, Arial, sans-serif; background: #F2F1E
 </div>
 
 <script>
-const API = "https://mimic-readmission-predictor.onrender.com";
+const API = "https://YOUR-RENDER-URL.onrender.com";
 let patients = [];
 
 function renderList() {
@@ -180,7 +180,7 @@ async function selectPatient(hadm_id) {
     const lvl = d.risk_level.toLowerCase();
     const pct = (d.risk_probability * 100).toFixed(1);
     const factors = deriveFactors(d);
-    const riskColor = lvl === "high" ? "#D50032" : lvl === "medium" ? "#E8C547" : "#5F9E6E";
+    const riskColor = lvl === "high" ? "#D50032" : lvl === "medium" ? "#ffde57" : "#78de40";
 
     panel.innerHTML = `
       <div class="detail-section">
@@ -235,6 +235,11 @@ async function init() {
     cohorts.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; sel.appendChild(o); });
 
     renderList();
+
+    // Auto-select patient if hadm_id in URL
+    const params = new URLSearchParams(window.location.search);
+    const hadmId = params.get("hadm_id");
+    if (hadmId) selectPatient(parseInt(hadmId));
   } catch (e) {
     document.getElementById("patientList").innerHTML = '<div style="padding:20px;color:#999;font-size:13px;">Failed to load patients. Ensure the API is running.</div>';
   }
