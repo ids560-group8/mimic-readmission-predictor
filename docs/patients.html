@@ -155,19 +155,23 @@ function renderList() {
 
 function deriveFactors(d) {
   const candidates = [];
-  if (d.num_prior_admissions >= 3) candidates.push({p:1, t:"Multiple prior hospitalizations (" + d.num_prior_admissions + " previous admissions)"});
-  else if (d.num_prior_admissions >= 1) candidates.push({p:2, t:"History of prior hospitalization (" + d.num_prior_admissions + " previous)"});
-  if (d.days_since_last_admission >= 0 && d.days_since_last_admission <= 30) candidates.push({p:1, t:"Recent hospitalization within the past month"});
+  if (d.num_prior_admissions >= 5) candidates.push({p:1, t:"Frequent hospital utilizer — high baseline readmission risk"});
+  else if (d.num_prior_admissions >= 1) candidates.push({p:2, t:"History of recurrent hospitalization"});
+  if (d.days_since_last_admission >= 0 && d.days_since_last_admission <= 30) candidates.push({p:1, t:"Recent hospitalization (" + Math.round(d.days_since_last_admission) + " days ago)"});
   else if (d.days_since_last_admission > 30 && d.days_since_last_admission <= 90) candidates.push({p:2, t:"Hospitalized within the past 3 months"});
   if (d.dc_snf_rehab === 1) candidates.push({p:1, t:"Discharged to skilled nursing or rehabilitation facility"});
   if (d.dc_other_facility === 1) candidates.push({p:2, t:"Transferred to another healthcare facility"});
-  if (d.num_diagnoses >= 15) candidates.push({p:1, t:"Complex clinical profile (" + d.num_diagnoses + " diagnoses)"});
-  else if (d.num_diagnoses >= 10) candidates.push({p:2, t:"Multiple diagnoses recorded (" + d.num_diagnoses + ")"});
-  if (d.elixhauser >= 10) candidates.push({p:1, t:"High chronic disease burden"});
-  else if (d.elixhauser >= 5) candidates.push({p:2, t:"Several chronic conditions present"});
+  if (d.secondary_diagnoses && d.secondary_diagnoses.length > 0) {
+    const dxs = d.secondary_diagnoses.split(";").map(x => x.trim()).filter(x => x);
+    if (dxs.length >= 3) candidates.push({p:1, t:"Secondary diagnoses include: " + dxs.slice(0, 4).join(", ")});
+    else if (dxs.length >= 1) candidates.push({p:2, t:"Additional diagnoses: " + dxs.join(", ")});
+  }
+  if (d.chronic_conditions && d.chronic_conditions.length > 0) {
+    const conds = d.chronic_conditions.split(";").map(c => c.trim()).filter(c => c);
+    if (conds.length >= 4) candidates.push({p:1, t:"High chronic disease burden (" + conds.slice(0, 3).join(", ") + ", and " + (conds.length - 3) + " more)"});
+    else if (conds.length >= 1) candidates.push({p:2, t:"Chronic conditions: " + conds.join(", ")});
+  }
   if (d.is_emergency === 1) candidates.push({p:2, t:"Admitted through emergency department"});
-  if (d.los >= 14) candidates.push({p:2, t:"Extended hospital stay (over 2 weeks)"});
-  else if (d.los >= 7) candidates.push({p:3, t:"Hospital stay longer than one week"});
   if (d.sofa >= 8) candidates.push({p:1, t:"Severe organ dysfunction detected"});
   else if (d.sofa >= 4) candidates.push({p:2, t:"Moderate organ dysfunction"});
   if (d.apsiii >= 60) candidates.push({p:2, t:"High acute illness severity"});
@@ -212,7 +216,7 @@ async function selectPatient(hadm_id) {
           <div class="info-box"><div class="label">Length of Stay</div><div class="value">${d.los.toFixed(1)} days</div></div>
           <div class="info-box"><div class="label">Disease Group</div><div class="value" style="font-size:13px;">${d.icd9_group}</div></div>
           <div class="info-box"><div class="label">Prior Admissions</div><div class="value">${d.num_prior_admissions}</div></div>
-          <div class="info-box"><div class="label">Ground Truth</div><div class="value">${d.readmit_30d ? "Readmitted" : "Not Readmitted"}</div></div>
+          <div class="info-box"><div class="label">Primary Diagnosis</div><div class="value" style="font-size:13px;">${d.primary_diagnosis}</div></div>
         </div>
       </div>
 
