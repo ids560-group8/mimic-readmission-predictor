@@ -87,5 +87,7 @@ def predict(req: PredictRequest):
         "dc_snf_rehab": int(row.get("dc_snf_rehab", 0)),
         "dc_other_facility": int(row.get("dc_other_facility", 0)),
         "icd9_group": str(row.get("icd9_group", "Unknown")),
-        "readmit_30d": int(row.get("readmit_30d", 0)),
+        "primary_diagnosis": str(row.get("primary_diagnosis", "Unknown")),
+        "secondary_diagnoses": str(row.get("secondary_diagnoses", "")),
+        "chronic_conditions": str(row.get("chronic_conditions", "")),
     }
