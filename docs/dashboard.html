@@ -99,7 +99,7 @@ tbody tr:hover { background: #f0eeeb; }
       <thead>
         <tr>
           <th>Patient ID</th>
-          <th>Disease Cohort</th>
+          <th>Disease Group</th>
           <th>Risk</th>
           <th>Level</th>
           <th>Recommended Action</th>
@@ -111,7 +111,7 @@ tbody tr:hover { background: #f0eeeb; }
     </table>
   </div>
 
-  <div class="section-title">Risk Distribution by Disease Cohort</div>
+  <div class="section-title">Risk Distribution by Disease Group</div>
   <div class="chart-container" id="chartArea">
     <div class="loader">Loading chart...</div>
   </div>
@@ -149,9 +149,9 @@ function downloadCSV(type) {
     filename = "followup_patients.csv";
   }
   rows.sort((a, b) => b.risk_probability - a.risk_probability);
-  const header = "Patient ID,Disease Cohort,Risk %,Risk Level,Recommended Action\n";
+  const header = "Patient ID,Disease Group,Risk %,Risk Level,Recommended Action\n";
   const csv = header + rows.map(p =>
-    `${p.hadm_id},${p.cohort},${(p.risk_probability*100).toFixed(1)}%,${p.risk_level},"${action(p.risk_level)}"`
+    `${p.hadm_id},${p.icd9_group},${(p.risk_probability*100).toFixed(1)}%,${p.risk_level},"${action(p.risk_level)}"`
   ).join("\n");
   const blob = new Blob([csv], {type: "text/csv"});
   const a = document.createElement("a");
@@ -189,7 +189,7 @@ async function load() {
       tbody.innerHTML = high.slice(0, 10).map(p => `
         <tr style="cursor:pointer" onclick="window.location.href='patients.html?hadm_id=${p.hadm_id}'">
           <td>${p.hadm_id}</td>
-          <td>${p.cohort}</td>
+          <td>${p.icd9_group}</td>
           <td>${(p.risk_probability * 100).toFixed(1)}%</td>
           <td>${badgeHTML(p.risk_level)}</td>
           <td>${action(p.risk_level)}</td>
@@ -197,12 +197,12 @@ async function load() {
       `).join("");
     }
 
-    // Chart: aggregate by cohort
+    // Chart: aggregate by disease group
     const cohorts = {};
     data.forEach(p => {
-      if (!cohorts[p.cohort]) cohorts[p.cohort] = { high: 0, medium: 0, low: 0, total: 0 };
-      cohorts[p.cohort][p.risk_level.toLowerCase()]++;
-      cohorts[p.cohort].total++;
+      if (!cohorts[p.icd9_group]) cohorts[p.icd9_group] = { high: 0, medium: 0, low: 0, total: 0 };
+      cohorts[p.icd9_group][p.risk_level.toLowerCase()]++;
+      cohorts[p.icd9_group].total++;
     });
     const sorted = Object.entries(cohorts).sort((a, b) => b[1].total - a[1].total);
     const maxTotal = sorted.length ? sorted[0][1].total : 1;
