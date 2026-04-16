@@ -155,7 +155,7 @@ function renderList() {
 
 function deriveFactors(d) {
   const candidates = [];
-  if (d.num_prior_admissions >= 5) candidates.push({p:1, t:"Frequent hospital utilizer — high baseline readmission risk"});
+  if (d.num_prior_admissions >= 5) candidates.push({p:1, t:"Frequent hospital utilizer: high baseline readmission risk"});
   else if (d.num_prior_admissions >= 1) candidates.push({p:2, t:"History of recurrent hospitalization"});
   if (d.days_since_last_admission >= 0 && d.days_since_last_admission <= 30) candidates.push({p:1, t:"Recent hospitalization (" + Math.round(d.days_since_last_admission) + " days ago)"});
   else if (d.days_since_last_admission > 30 && d.days_since_last_admission <= 90) candidates.push({p:2, t:"Hospitalized within the past 3 months"});
